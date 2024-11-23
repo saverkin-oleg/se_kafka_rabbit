@@ -92,3 +92,9 @@ docker-compose up -d --build
 Описано в [файле](./kafka-consumer.ipynb)
 
 ### Итог работы
+
+
+#### Работа с RabbitMQ Publisher
+Описано в [файле](./rabbit-producer.ipynb)
+#### Работа с RabbitMQ Consumer
+Описано в [файле](./rabbit-consumer.ipynb)
