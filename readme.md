@@ -95,6 +95,7 @@ docker-compose up -d --build
 
 
 #### Работа с RabbitMQ Publisher
-Описано в [файле](./rabbit-producer.ipynb)
+Описано в [файле](./rabbit-producer.ipynb)  
+Инструкция по созданию очередей со скриншотами [тут](https://disk.yandex.ru/i/UkeJNIQeHqxfDg)
 #### Работа с RabbitMQ Consumer
 Описано в [файле](./rabbit-consumer.ipynb)
