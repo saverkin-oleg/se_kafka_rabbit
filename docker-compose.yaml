@@ -3,14 +3,18 @@ version: '3.8'
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+
   kafka1:
     image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
-    restart: unless-stopped
+    container_name: kafka1
+    ports:
+      - "9093:9093"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -19,14 +23,14 @@ services:
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9093
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-    ports:
-      - "9093:9093"
+    depends_on:
+      - zookeeper
 
   kafka2:
     image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
-    restart: unless-stopped
+    container_name: kafka2
+    ports:
+      - "9095:9095"
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -35,14 +39,14 @@ services:
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9094,OUTSIDE://0.0.0.0:9095
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-    ports:
-      - "9095:9095"
+    depends_on:
+      - zookeeper
 
   kafka3:
     image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
-    restart: unless-stopped
+    container_name: kafka3
+    ports:
+      - "9097:9097"
     environment:
       KAFKA_BROKER_ID: 3
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -51,17 +55,73 @@ services:
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9096,OUTSIDE://0.0.0.0:9097
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
-    ports:
-      - "9097:9097"
+    depends_on:
+      - zookeeper
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9093,kafka3:9094
     depends_on:
       - kafka1
       - kafka2
       - kafka3
-    ports:
-      - "8080:8080"
+  rabbitmq-node1:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-node1
+    hostname: rabbitmq-node1
     environment:
-      KAFKA_CLUSTERS_0_NAME: local-cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9094,kafka3:9096"
+      - RABBITMQ_ERLANG_COOKIE=secret_cookie
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+    ports:
+      - "15672:15672"  # Интерфейс управления
+      - "5672:5672"    # Порт AMQP
+    networks:
+      - rabbitmq_cluster
+    volumes:
+      - rabbitmq-node1-data:/var/lib/rabbitmq
+    command: rabbitmq-server
+
+  rabbitmq-node2:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-node2
+    hostname: rabbitmq-node2
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=secret_cookie
+    networks:
+      - rabbitmq_cluster
+    depends_on:
+      - rabbitmq-node1
+    volumes:
+      - rabbitmq-node2-data:/var/lib/rabbitmq
+    command: rabbitmq-server
+
+  rabbitmq-node3:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-node3
+    hostname: rabbitmq-node3
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=secret_cookie
+    networks:
+      - rabbitmq_cluster
+    depends_on:
+      - rabbitmq-node1
+    volumes:
+      - rabbitmq-node3-data:/var/lib/rabbitmq
+    command: rabbitmq-server
+
+volumes:
+  rabbitmq-node1-data:
+  rabbitmq-node2-data:
+  rabbitmq-node3-data:
+
+networks:
+  rabbitmq_cluster:
+    driver: bridge
+  default:
+    driver: bridge
