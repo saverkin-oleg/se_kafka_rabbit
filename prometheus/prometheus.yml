@@ -2,6 +2,7 @@ global:
   scrape_interval: 5s
 
 scrape_configs:
+  # Kafka Brokers
   - job_name: 'kafka1'
     static_configs:
-      - targets: ['kafka1:9100', 'kafka2:9101', 'kafka3:9102']
+      - targets: ['kafka1:9100','kafka2:9101','kafka3:9102']

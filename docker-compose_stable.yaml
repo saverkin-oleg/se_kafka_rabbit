@@ -12,7 +12,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: '1'
           memory: 1G
         reservations:
           memory: 512M
@@ -28,7 +28,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka1:9092,OUTSIDE://89.169.165.185:9093
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka1:9092,OUTSIDE://89.169.182.8:9093
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9093
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -38,15 +38,21 @@ services:
     volumes:
       - ./jmx/jmx_prometheus_javaagent.jar:/usr/app/jmx_prometheus_javaagent.jar
       - ./jmx/jmx_exporter_config.yaml:/usr/app/jmx_exporter_config.yaml
+
     depends_on:
       - zookeeper
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 1G
+          cpus: '2'
+          memory: 2G
         reservations:
-          memory: 512M
+          memory: 1G
 
   kafka2:
     image: confluentinc/cp-kafka:7.5.0
@@ -59,7 +65,7 @@ services:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka2:9094,OUTSIDE://89.169.165.185:9095
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka2:9094,OUTSIDE://89.169.182.8:9095
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9094,OUTSIDE://0.0.0.0:9095
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -71,13 +77,18 @@ services:
       - ./jmx/jmx_exporter_config.yaml:/usr/app/jmx_exporter_config.yaml
     depends_on:
       - zookeeper
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 1G
+          cpus: '2'
+          memory: 2G
         reservations:
-          memory: 512M
+          memory: 1G
 
   kafka3:
     image: confluentinc/cp-kafka:7.5.0
@@ -90,7 +101,7 @@ services:
       KAFKA_BROKER_ID: 3
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka3:9096,OUTSIDE://89.169.165.185:9097
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka3:9096,OUTSIDE://89.169.182.8:9097
       KAFKA_LISTENERS: INSIDE://0.0.0.0:9096,OUTSIDE://0.0.0.0:9097
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -102,13 +113,18 @@ services:
       - ./jmx/jmx_exporter_config.yaml:/usr/app/jmx_exporter_config.yaml
     depends_on:
       - zookeeper
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--list", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 1G
+          cpus: '2'
+          memory: 2G
         reservations:
-          memory: 512M
+          memory: 1G
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -126,10 +142,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.1'
-          memory: 256M
+          cpus: '0.5'
+          memory: 512M
         reservations:
-          memory: 128M
+          memory: 256M
 
   rabbitmq-node1:
     image: rabbitmq:3-management
@@ -139,24 +155,14 @@ services:
       - RABBITMQ_ERLANG_COOKIE=secret_cookie
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
-      - RABBITMQ_NODENAME=rabbit@rabbitmq-node1
     ports:
       - "15672:15672"  # Интерфейс управления
       - "5672:5672"    # Порт AMQP
+    networks:
+      - rabbitmq_cluster
     volumes:
       - rabbitmq-node1-data:/var/lib/rabbitmq
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          memory: 256M
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    command: rabbitmq-server
 
   rabbitmq-node2:
     image: rabbitmq:3-management
@@ -164,24 +170,13 @@ services:
     hostname: rabbitmq-node2
     environment:
       - RABBITMQ_ERLANG_COOKIE=secret_cookie
-      - RABBITMQ_NODENAME=rabbit@rabbitmq-node2
+    networks:
+      - rabbitmq_cluster
     depends_on:
       - rabbitmq-node1
     volumes:
       - rabbitmq-node2-data:/var/lib/rabbitmq
-    command: bash -c "sleep 10 && rabbitmq-server"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          memory: 256M
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    command: rabbitmq-server
 
   rabbitmq-node3:
     image: rabbitmq:3-management
@@ -189,43 +184,13 @@ services:
     hostname: rabbitmq-node3
     environment:
       - RABBITMQ_ERLANG_COOKIE=secret_cookie
-      - RABBITMQ_NODENAME=rabbit@rabbitmq-node3
+    networks:
+      - rabbitmq_cluster
     depends_on:
       - rabbitmq-node1
     volumes:
       - rabbitmq-node3-data:/var/lib/rabbitmq
-    command: bash -c "sleep 10 && rabbitmq-server"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          memory: 256M
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  rabbitmq-exporter:
-    image: kbudde/rabbitmq-exporter
-    container_name: rabbitmq-exporter
-    environment:
-      - RABBIT_URL=http://rabbitmq-node1:15672
-      - RABBIT_USER=user
-      - RABBIT_PASSWORD=password
-    ports:
-      - "15692:9419"
-    depends_on:
-      - rabbitmq-node1
-    deploy:
-      resources:
-        limits:
-          cpus: '0.1'
-          memory: 128M
-        reservations:
-          memory: 64M
+    command: rabbitmq-server
 
   grafana:
     image: grafana/grafana:latest
@@ -239,14 +204,6 @@ services:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/dashboards:/var/lib/grafana/dashboards
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 256M
-        reservations:
-          memory: 128M
-
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -254,13 +211,6 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 256M
-        reservations:
-          memory: 128M
 
 volumes:
   rabbitmq-node1-data:
