@@ -157,7 +157,7 @@ services:
       rabbitmqctl stop_app &&
       rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
       rabbitmqctl start_app &&
-      tail -f /var/log/rabbitmq/*.log
+      exec rabbitmq-server
       "
     mem_limit: 512m
     cpus: 0.3
@@ -185,7 +185,7 @@ services:
       rabbitmqctl stop_app &&
       rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
       rabbitmqctl start_app &&
-      tail -f /var/log/rabbitmq/*.log
+      exec rabbitmq-server
       "
     restart: unless-stopped
     mem_limit: 512m
