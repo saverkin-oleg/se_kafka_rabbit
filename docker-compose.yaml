@@ -197,7 +197,6 @@ services:
   rabbitmq-exporter:
     image: kbudde/rabbitmq-exporter:latest
     container_name: rabbitmq-exporter
-    restart: unless-stopped
     environment:
       - RABBIT_URL=http://rabbitmq-node1:15672
       - RABBIT_USER=user
@@ -223,7 +222,6 @@ services:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/dashboards:/var/lib/grafana/dashboards
-    restart: unless-stopped
     mem_limit: 256m
     cpus: 0.2
 
