@@ -9,13 +9,10 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
-        reservations:
-          memory: 512M
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 0.5
+
 
   kafka1:
     image: confluentinc/cp-kafka:7.5.0
@@ -38,15 +35,12 @@ services:
     volumes:
       - ./jmx/jmx_prometheus_javaagent.jar:/usr/app/jmx_prometheus_javaagent.jar
       - ./jmx/jmx_exporter_config.yaml:/usr/app/jmx_exporter_config.yaml
+      - kafka1-data:/var/lib/kafka/data
     depends_on:
       - zookeeper
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
-        reservations:
-          memory: 512M
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 0.5
 
   kafka2:
     image: confluentinc/cp-kafka:7.5.0
@@ -69,15 +63,12 @@ services:
     volumes:
       - ./jmx/jmx_prometheus_javaagent.jar:/usr/app/jmx_prometheus_javaagent.jar
       - ./jmx/jmx_exporter_config.yaml:/usr/app/jmx_exporter_config.yaml
+      - kafka2-data:/var/lib/kafka/data
     depends_on:
       - zookeeper
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
-        reservations:
-          memory: 512M
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 0.5
 
   kafka3:
     image: confluentinc/cp-kafka:7.5.0
@@ -100,15 +91,12 @@ services:
     volumes:
       - ./jmx/jmx_prometheus_javaagent.jar:/usr/app/jmx_prometheus_javaagent.jar
       - ./jmx/jmx_exporter_config.yaml:/usr/app/jmx_exporter_config.yaml
+      - kafka3-data:/var/lib/kafka/data
     depends_on:
       - zookeeper
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
-        reservations:
-          memory: 512M
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 0.5
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -123,13 +111,9 @@ services:
       - kafka1
       - kafka2
       - kafka3
-    deploy:
-      resources:
-        limits:
-          cpus: '0.1'
-          memory: 256M
-        reservations:
-          memory: 128M
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.2
 
   rabbitmq-node1:
     image: rabbitmq:3-management
@@ -145,13 +129,9 @@ services:
       - "5672:5672"    # Порт AMQP
     volumes:
       - rabbitmq-node1-data:/var/lib/rabbitmq
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          memory: 256M
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.3
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 30s
@@ -162,6 +142,7 @@ services:
     image: rabbitmq:3-management
     container_name: rabbitmq-node2
     hostname: rabbitmq-node2
+    restart: unless-stopped
     environment:
       - RABBITMQ_ERLANG_COOKIE=secret_cookie
       - RABBITMQ_NODENAME=rabbit@rabbitmq-node2
@@ -169,14 +150,16 @@ services:
       - rabbitmq-node1
     volumes:
       - rabbitmq-node2-data:/var/lib/rabbitmq
-    command: bash -c "sleep 10 && rabbitmq-server"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          memory: 256M
+    command: >
+      bash -c "
+      sleep 10 && rabbitmq-server -detached &&
+      rabbitmqctl stop_app &&
+      rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
+      rabbitmqctl start_app &&
+      tail -f /var/log/rabbitmq/*.log
+      "
+    mem_limit: 512m
+    cpus: 0.3
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 30s
@@ -194,14 +177,17 @@ services:
       - rabbitmq-node1
     volumes:
       - rabbitmq-node3-data:/var/lib/rabbitmq
-    command: bash -c "sleep 10 && rabbitmq-server"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          memory: 256M
+    command: >
+      bash -c "
+      sleep 10 && rabbitmq-server -detached &&
+      rabbitmqctl stop_app &&
+      rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
+      rabbitmqctl start_app &&
+      tail -f /var/log/rabbitmq/*.log
+      "
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.3
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
       interval: 30s
@@ -209,43 +195,37 @@ services:
       retries: 5
 
   rabbitmq-exporter:
-    image: kbudde/rabbitmq-exporter
+    image: kbudde/rabbitmq-exporter:latest
     container_name: rabbitmq-exporter
+    restart: unless-stopped
     environment:
       - RABBIT_URL=http://rabbitmq-node1:15672
       - RABBIT_USER=user
       - RABBIT_PASSWORD=password
     ports:
-      - "15692:9419"
+      - "9419:9419"
     depends_on:
       - rabbitmq-node1
-    deploy:
-      resources:
-        limits:
-          cpus: '0.1'
-          memory: 128M
-        reservations:
-          memory: 64M
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.1
 
   grafana:
     image: grafana/grafana:latest
+    restart: unless-stopped
     container_name: grafana
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=devpassword
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/dashboards:/var/lib/grafana/dashboards
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 256M
-        reservations:
-          memory: 128M
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.2
 
   prometheus:
     image: prom/prometheus:latest
@@ -254,21 +234,18 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 256M
-        reservations:
-          memory: 128M
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.2
 
 volumes:
   rabbitmq-node1-data:
   rabbitmq-node2-data:
   rabbitmq-node3-data:
+  kafka1-data:
+  kafka2-data:
+  kafka3-data:
 
 networks:
-  rabbitmq_cluster:
-    driver: bridge
   default:
     driver: bridge
