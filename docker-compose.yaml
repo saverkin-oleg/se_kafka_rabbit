@@ -157,6 +157,7 @@ services:
       rabbitmqctl stop_app &&
       rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
       rabbitmqctl start_app &&
+      rabbitmqctl stop &&
       exec rabbitmq-server
       "
     mem_limit: 512m
@@ -185,6 +186,7 @@ services:
       rabbitmqctl stop_app &&
       rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
       rabbitmqctl start_app &&
+      rabbitmqctl stop &&
       exec rabbitmq-server
       "
     restart: unless-stopped
