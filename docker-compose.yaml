@@ -152,7 +152,8 @@ services:
       - rabbitmq-node2-data:/var/lib/rabbitmq
     command: >
       bash -c "
-      sleep 10 && rabbitmq-server -detached &&
+      rabbitmq-server -detached &&
+      until rabbitmqctl await_startup; do sleep 2; done &&
       rabbitmqctl stop_app &&
       rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
       rabbitmqctl start_app &&
@@ -179,7 +180,8 @@ services:
       - rabbitmq-node3-data:/var/lib/rabbitmq
     command: >
       bash -c "
-      sleep 10 && rabbitmq-server -detached &&
+      rabbitmq-server -detached &&
+      until rabbitmqctl await_startup; do sleep 2; done &&
       rabbitmqctl stop_app &&
       rabbitmqctl join_cluster rabbit@rabbitmq-node1 &&
       rabbitmqctl start_app &&
